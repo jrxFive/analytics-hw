@@ -46,8 +46,7 @@ func TestAnalytics_getQsParamOrDefault(t *testing.T) {
 					rec := httptest.NewRecorder()
 
 					c := e.NewContext(req, rec)
-					c.SetParamNames(QsGroup)
-					c.SetParamValues(ExpectedDefaultGroupGUID)
+					c.QueryParams().Set(QsGroup, ExpectedDefaultGroupGUID)
 					return c
 				}(),
 			},
@@ -84,8 +83,8 @@ func TestAnalytics_getQsParamOrDefault(t *testing.T) {
 					rec := httptest.NewRecorder()
 
 					c := e.NewContext(req, rec)
+					c.QueryParams().Set(QsUnit, "hour")
 					c.SetParamNames(QsUnit)
-					c.SetParamValues("hour")
 					return c
 				}(),
 			},
@@ -122,8 +121,7 @@ func TestAnalytics_getQsParamOrDefault(t *testing.T) {
 					rec := httptest.NewRecorder()
 
 					c := e.NewContext(req, rec)
-					c.SetParamNames(QsUnits)
-					c.SetParamValues("5")
+					c.QueryParams().Set(QsUnits, "5")
 					return c
 				}(),
 			},
