@@ -120,10 +120,6 @@ func main() {
 		cacheMiddlewareImpl.Middleware(),
 	))
 
-	for _, route := range e.Routes() {
-		s.Logger.Info(route.Path, ",", route.Name, ",", route.Method)
-	}
-
 	//Server
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", s.ServerPort),
