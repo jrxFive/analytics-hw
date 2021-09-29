@@ -1,0 +1,27 @@
+{
+  "links": [
+    {
+      "created_at": "2021-09-21T00:42:35+0000",
+      "id": "bit.ly/3nPhiCD",
+      "link": "https://bit.ly/3nPhiCD",
+      "custom_bitlinks": [],
+      "long_url": "https://hashicorp.com/",
+      "title": "HashiCorp: Infrastructure enables innovation",
+      "archived": false,
+      "created_by": "jrxfive",
+      "client_id": "ece654beaf35f9c29f610ffd4fb128702b4bad15",
+      "tags": [],
+      "deeplinks": [],
+      "references": {
+        "group": "https://api-ssl.bitly.com/v4/groups/Bl9iekhPWD3"
+      }
+    }
+  ],
+  "pagination": {
+    "prev": "",
+    "next": "https://api-ssl.bitly.com/v4/groups/Bl9iekhPWD3/bitlinks?page=2&size=1",
+    "size": 1,
+    "page": 1,
+    "total": 3
+  }
+}

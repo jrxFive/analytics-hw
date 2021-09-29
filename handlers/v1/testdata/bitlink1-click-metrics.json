@@ -1,0 +1,12 @@
+{
+  "unit_reference": "2021-09-29T01:47:04+0000",
+  "metrics": [
+    {
+      "value": "US",
+      "clicks": 2
+    }
+  ],
+  "units": 30,
+  "unit": "day",
+  "facet": "countries"
+}
