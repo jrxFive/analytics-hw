@@ -181,5 +181,5 @@ make && ./analytics-hw
 
 Container:
 ```
-docker run analytics-hw
+docker run -p HOST_PORT:CONTAINER_PORT analytics-hw
 ```
