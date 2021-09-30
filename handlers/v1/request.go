@@ -17,12 +17,14 @@ type PaginatedGroupBitLinksRequest struct {
 	req openapi.ApiGetBitlinksByGroupRequest
 }
 
-// Aggregate all paginated responses from upstream API, as a slice.
-func (p PaginatedGroupBitLinksRequest) SliceResponse(fn GroupBitLinksRequestExecutorFn) ([]PaginatedGroupBitLinksResponse, error) {
-	allGroupBitlinks := make([]PaginatedGroupBitLinksResponse, 0, 0)
+// SliceResponse aggregates all paginated responses from upstream API, as a slice.
+func (p *PaginatedGroupBitLinksRequest) SliceResponse(fn GroupBitLinksRequestExecutorFn) ([]PaginatedGroupBitLinksResponse, error) {
+	allGroupBitlinks := make([]PaginatedGroupBitLinksResponse, 0)
 
 	for {
 		bitLinks, response, err := fn()
+		response.Body.Close()
+
 		if err != nil {
 			allGroupBitlinks = append(allGroupBitlinks, PaginatedGroupBitLinksResponse{
 				Response: response,
@@ -40,25 +42,26 @@ func (p PaginatedGroupBitLinksRequest) SliceResponse(fn GroupBitLinksRequestExec
 		}
 
 		if page, ok := bitLinks.GetPaginationOk(); ok {
-			if len(*page.Next) == 0 {
+			if *page.Next == "" {
 				return allGroupBitlinks, nil
 			}
 
 			p.req = p.req.Page(page.GetPage() + 1)
 		}
 	}
-
 }
 
-//For each paginated response send results through given channel.
-func (p PaginatedGroupBitLinksRequest) ChannelResponse(ch chan PaginatedGroupBitLinksResponse, fn GroupBitLinksRequestExecutorFn) {
+// ChannelResponse for each paginated response send results through given channel.
+func (p *PaginatedGroupBitLinksRequest) ChannelResponse(ch chan PaginatedGroupBitLinksResponse, fn GroupBitLinksRequestExecutorFn) {
 	for {
 		bitLinks, response, err := fn()
+		response.Body.Close()
 		if err != nil {
 			ch <- PaginatedGroupBitLinksResponse{
 				Response: response,
 				Err:      err,
 			}
+
 			close(ch)
 			return
 		}
@@ -72,7 +75,7 @@ func (p PaginatedGroupBitLinksRequest) ChannelResponse(ch chan PaginatedGroupBit
 		}
 
 		if page, ok := bitLinks.GetPaginationOk(); ok {
-			if len(*page.Next) == 0 {
+			if *page.Next == "" {
 				close(ch)
 				return
 			}

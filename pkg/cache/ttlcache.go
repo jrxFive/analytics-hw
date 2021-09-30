@@ -9,14 +9,14 @@ import (
 )
 
 var (
+	// ErrFetchedKeyValueNotRequiredType a value fetched from the cache is not the expected type
 	ErrFetchedKeyValueNotRequiredType = errors.New("value is not required type")
 )
 
 type ErrorLoggerFn func(key string, err error)
 
-var NoopErrorLoggerFn = func(key string, err error) {
-	return
-}
+// NoopErrorLoggerFn does not log anything
+var NoopErrorLoggerFn = func(key string, err error) {}
 
 type InMemoryTTLCache struct {
 	cache         ttlCache.SimpleCache
@@ -54,7 +54,7 @@ func (i InMemoryTTLCache) Get(key string) ([]byte, bool) {
 }
 
 func (i InMemoryTTLCache) Set(key string, response []byte, expiration time.Time) {
-	duration := expiration.Sub(time.Now())
+	duration := time.Until(expiration)
 
 	if err := i.cache.SetWithTTL(key, response, duration); err != nil {
 		i.errorLoggerFn(key, err)

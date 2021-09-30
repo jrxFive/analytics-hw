@@ -4,30 +4,31 @@ GOOS=darwin
 GOARCH=amd64
 
 .PHONY: build
-.PHONY: fmt
-.PHONY: vet
-.PHONY: build.docker
-.PHONY: test
-.PHONY: clean
-
 build: fmt vet pkg/bitly
 	go build -o $(BINARY_NAME) cmd/api/main.go
 
+.PHONY: build.docker
 build.docker:
 	docker build -t $(BINARY_NAME) .
 
+.PHONY: fmt
 fmt:
 	go $@ ./...
 
+.PHONY: vet
 vet:
 	go $@ ./...
 
+.PHONE: lint
+	golangci-lint run
 
+.PHONY: test
 test: fmt vet pkg/bitly
 	go test -cover -race ./...
 
 analytics-server: build
 
+.PHONY: clean
 clean:
 	-rm $(BINARY_NAME)
 	-rm -rf pkg/bitly

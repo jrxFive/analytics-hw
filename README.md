@@ -119,10 +119,9 @@ type ServerSettings struct {
 ## Dependencies
 ```
 go 1.15
+golangci-lint (not required, used for make lint)
 openapi-generator (brew install openapi-generator if on osx)
 docker 20.10.17
-
-
 ```
 
 ## Server Dependencies

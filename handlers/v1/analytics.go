@@ -16,16 +16,24 @@ import (
 )
 
 const (
+	// QsGroup group querystring parameter
 	QsGroup = "group"
-	QsUnit  = "unit"
+
+	// QsUnit unit querystring parameter
+	QsUnit = "unit"
+
+	// QsUnits units querystring parameter
 	QsUnits = "units"
 
-	//only country is supported currently
+	// FacetCountry only country is supported currently
 	FacetCountry = "country"
 )
 
 var (
-	SupportedParams = []string{QsGroup, QsUnit, QsUnits}
+	// PaginationChannelBuffer size of buffer channel when obtaining group bitlinks
+	PaginationChannelBuffer = 100
+
+	// DefaultQsParams currently supported QueryString parameters and their defaults
 	DefaultQsParams = map[string]string{
 		QsGroup: "default",
 		QsUnit:  "day",
@@ -38,29 +46,32 @@ type Analytics struct {
 	settings settings.Settings
 }
 
-func NewAnalytics(client *openapi.APIClient, settings settings.Settings) Analytics {
+func NewAnalytics(client *openapi.APIClient, s settings.Settings) Analytics {
 	return Analytics{
 		client:   client,
-		settings: settings,
+		settings: s,
 	}
 }
 
-func (a Analytics) Initialize(g *echo.Group) {
+func (a *Analytics) Initialize(g *echo.Group) {
 	g.GET("/countries", a.GetByCountries)
 }
 
-func (a Analytics) getQsParamOrDefault(param string, c echo.Context) string {
-	if p := c.QueryParams().Get(param); len(p) == 0 {
+func (a *Analytics) getQsParamOrDefault(param string, c echo.Context) string {
+	var p string
+
+	if p = c.QueryParams().Get(param); p == "" {
 		return DefaultQsParams[param]
-	} else {
-		return p
 	}
+
+	return p
 }
 
-//Obtain user associated with api key
-func (a Analytics) fetchUser(ctx context.Context) (openapi.User, error) {
+// fetchUser obtain user associated with api key
+func (a *Analytics) fetchUser(ctx context.Context) (openapi.User, error) {
 	userRequest := a.client.UserApi.GetUser(ctx)
-	user, _, err := a.client.UserApi.GetUserExecute(userRequest)
+	user, response, err := a.client.UserApi.GetUserExecute(userRequest)
+	defer response.Body.Close()
 	if err != nil {
 		return user, err
 	}
@@ -68,13 +79,13 @@ func (a Analytics) fetchUser(ctx context.Context) (openapi.User, error) {
 	return user, nil
 }
 
-//Fetch all bitlinks of given groupId. The response can potentially be paginated (when using default size).
-//Use Channel implementation to avoid waiting for all results to be obtained to further process
-func (a Analytics) getGroupBitLinksWithChannel(ctx context.Context, groupId string, ch chan PaginatedGroupBitLinksResponse) {
-	groupBitlinksRequest := a.client.BitlinksApi.GetBitlinksByGroup(ctx, groupId)
+// getGroupBitLinksWithChannel fetch all bitlinks of given groupId. The response can potentially be paginated (when using default size).
+// Use Channel implementation to avoid waiting for all results to be obtained to further process
+func (a *Analytics) getGroupBitLinksWithChannel(ctx context.Context, groupID string, ch chan PaginatedGroupBitLinksResponse) {
+	groupBitlinksRequest := a.client.BitlinksApi.GetBitlinksByGroup(ctx, groupID)
 
-	//Fetch All Group Bitlinks, this can potentially be paginated based on the number of links
-	//Use Channel implementation to avoid waiting for all results
+	// Fetch All Group Bitlinks, this can potentially be paginated based on the number of links
+	// Use Channel implementation to avoid waiting for all results
 	pagintedGroupLinksRequest := PaginatedGroupBitLinksRequest{req: groupBitlinksRequest}
 
 	pagintedGroupLinksRequest.ChannelResponse(ch, func() (openapi.Bitlinks, *http.Response, error) {
@@ -88,8 +99,8 @@ func (a Analytics) getGroupBitLinksWithChannel(ctx context.Context, groupId stri
 	})
 }
 
-//Iterate over channel of group's bitlinks using waitgroup to do concurrent requests
-func (a Analytics) getGroupBitLinkCountryMetricsFromChannel(ctx context.Context, timeUnit openapi.TimeUnit, units string, linksChannel chan PaginatedGroupBitLinksResponse) (map[string]schemas.AnalyticMetrics, chan error) {
+// Iterate over channel of group's bitlinks using waitgroup to do concurrent requests
+func (a *Analytics) getGroupBitLinkCountryMetricsFromChannel(ctx context.Context, timeUnit openapi.TimeUnit, units string, linksChannel chan PaginatedGroupBitLinksResponse) (map[string]schemas.AnalyticMetrics, chan error) {
 	wg := sync.WaitGroup{}
 	mu := sync.RWMutex{}
 	wgErr := make(chan error, cap(linksChannel))
@@ -118,13 +129,14 @@ func (a Analytics) getGroupBitLinkCountryMetricsFromChannel(ctx context.Context,
 			bitlinkMetricsCountriesRequest = bitlinkMetricsCountriesRequest.Unit(timeUnit)
 			bitlinkMetricsCountriesRequest = bitlinkMetricsCountriesRequest.Units(cast.ToInt32(units))
 
-			bitlinkClickMetrics, _, err := a.client.BitlinksApi.GetMetricsForBitlinkByCountriesExecute(bitlinkMetricsCountriesRequest)
+			bitlinkClickMetrics, response, err := a.client.BitlinksApi.GetMetricsForBitlinkByCountriesExecute(bitlinkMetricsCountriesRequest)
+			response.Body.Close()
 			if err != nil {
 				a.settings.Logger.Error(err)
 				wgErr <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 			}
 
-			//If bitlink has no click no metrics are given in response
+			// If bitlink has no click no metrics are given in response
 			for _, bitlinkMetric := range *bitlinkClickMetrics.Metrics {
 				mu.RLock()
 				v, ok := aggregatedBitLinkMetrics[*b.Bitlink.Id]
@@ -163,8 +175,7 @@ func (a Analytics) getGroupBitLinkCountryMetricsFromChannel(ctx context.Context,
 	return aggregatedBitLinkMetrics, wgErr
 }
 
-//querystring parameters, days(default 30),group(token default), countries(all),
-func (a Analytics) GetByCountries(c echo.Context) error {
+func (a *Analytics) GetByCountries(c echo.Context) error {
 	var (
 		apiKey   string
 		group    string
@@ -173,23 +184,23 @@ func (a Analytics) GetByCountries(c echo.Context) error {
 		timeUnit *openapi.TimeUnit
 	)
 
-	//Middleware will add to context to be able to fetch key for individual requests
-	//Use context.Background, http.Server is configured to have upperlimit to write response
-	//If this were to change use WithDeadline/WithCancel
+	// Middleware will add to context to be able to fetch key for individual requests
+	// Use context.Background, http.Server is configured to have upperlimit to write response
+	// If this were to change use WithDeadline/WithCancel
 	apiKey = c.Get(types.ContextBitlyAPIKey).(string)
 
-	//obtain params and defaults if not given
+	// obtain params and defaults if not given
 	group = a.getQsParamOrDefault(QsGroup, c)
 	unit = a.getQsParamOrDefault(QsUnit, c)
 	units = a.getQsParamOrDefault(QsUnits, c)
 
-	//verify that given parameter is a valid time unit
+	// verify that given parameter is a valid time unit
 	timeUnit, err := openapi.NewTimeUnitFromValue(unit)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, types.ErrInvalidUnit)
 	}
 
-	//initialize response struct
+	// initialize response struct
 	response := schemas.AnalyticsResponse{
 		Data:  map[string]schemas.AnalyticMetrics{},
 		Unit:  unit,
@@ -197,7 +208,7 @@ func (a Analytics) GetByCountries(c echo.Context) error {
 		Facet: FacetCountry,
 	}
 
-	//Group Querystring parameter was not given or specified (default), find User's default group
+	// group Querystring parameter was not given or specified (default), find User's default group
 	if group == DefaultQsParams[QsGroup] {
 		ctx := context.WithValue(context.Background(), openapi.ContextAccessToken, apiKey)
 		user, err := a.fetchUser(ctx)
@@ -211,7 +222,7 @@ func (a Analytics) GetByCountries(c echo.Context) error {
 	}
 
 	ctx := context.WithValue(context.Background(), openapi.ContextAccessToken, apiKey)
-	allGroupBitLinksChannel := make(chan PaginatedGroupBitLinksResponse, 100)
+	allGroupBitLinksChannel := make(chan PaginatedGroupBitLinksResponse, PaginationChannelBuffer)
 	a.getGroupBitLinksWithChannel(ctx, response.Group, allGroupBitLinksChannel)
 
 	ctx = context.WithValue(context.Background(), openapi.ContextAccessToken, apiKey)
