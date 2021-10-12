@@ -130,7 +130,7 @@ func (a *Analytics) getGroupBitLinkCountryMetricsFromChannel(ctx context.Context
 			bitlinkMetricsCountriesRequest = bitlinkMetricsCountriesRequest.Units(cast.ToInt32(units))
 
 			bitlinkClickMetrics, response, err := a.client.BitlinksApi.GetMetricsForBitlinkByCountriesExecute(bitlinkMetricsCountriesRequest)
-			response.Body.Close()
+			defer response.Body.Close()
 			if err != nil {
 				a.settings.Logger.Error(err)
 				wgErr <- echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -223,7 +223,7 @@ func (a *Analytics) GetByCountries(c echo.Context) error {
 
 	ctx := context.WithValue(context.Background(), openapi.ContextAccessToken, apiKey)
 	allGroupBitLinksChannel := make(chan PaginatedGroupBitLinksResponse, PaginationChannelBuffer)
-	a.getGroupBitLinksWithChannel(ctx, response.Group, allGroupBitLinksChannel)
+	go a.getGroupBitLinksWithChannel(ctx, response.Group, allGroupBitLinksChannel)
 
 	ctx = context.WithValue(context.Background(), openapi.ContextAccessToken, apiKey)
 	aggregatedBitLinkMetrics, errs := a.getGroupBitLinkCountryMetricsFromChannel(ctx, *timeUnit, units, allGroupBitLinksChannel)
