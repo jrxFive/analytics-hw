@@ -1,0 +1,17 @@
+{
+  "created": "2021-09-18T14:01:51+0000",
+  "modified": "2021-09-18T14:01:51+0000",
+  "login": "jrxfive",
+  "is_active": true,
+  "is_2fa_enabled": false,
+  "name": "jrxfive",
+  "emails": [
+    {
+      "email": "redacted@gmail.com",
+      "is_primary": true,
+      "is_verified": true
+    }
+  ],
+  "is_sso_user": false,
+  "default_group_guid": "Bl9iekhPWD3"
+}
