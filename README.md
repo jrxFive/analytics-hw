@@ -12,14 +12,14 @@ Make, if it doesn't exist, as long the necessary dependencies are installed.
 ### Caching
 Utilize an opinionated [caching middleware](third_party/echo-http-cache) which was forked to provide per user caching instead of global
 caching. To also show understanding of interfaces, removed the included adapter implementations and provided a simple [TTLCache](pkg/cache) that can
- be extended to use more traditonal caching (memcached, redis). To avoid re-processing the same request as the upstream API does not support granularity below `unit=minute`. At
+ be extended to use more traditional caching (memcached, redis). To avoid re-processing the same request as the upstream API does not support granularity below `unit=minute`. At
 most the cache will return a max-age/Expiration of 60 seconds(which is configurable via environment variable).
 
 ### Pagination Channels/WaitGroup
 Since the response for getting a group's bitlinks can potentially be paginated. A custom type [PaginatedGroupBitLinksRequest](handlers/request.go)
-wraps around the request to add pagination support. Two implementation are provided Slice and Channel. For the Handler/Controller
+wraps around the request to add pagination support. Two implementation provided are Slice and Channel. For the Handler/Controller
 we use the channel since it does not block to get all results; on each request all results are passed through a channel for the
-WaitGroup to perform aggergation.
+WaitGroup to perform aggregation.
 
 ### What's Missing
 Due to the current day of the given `units` these values can change. While the server has an opinionated
@@ -34,6 +34,9 @@ using a library such as [validator](https://github.com/go-playground/validator) 
 CircuitBreakers/Retry Decorators for upstream API requests
 
 OpenAPI specification to generate a client.
+
+Statsd/Prometheus, echo does come with a prometheus middleware but would be nice to have additional stats/metrics to help
+identify any issues/slowness either with the api or upstream api thats being queried.
 
 ### Server Routes
 The server currently implements two routes, one for health checking
