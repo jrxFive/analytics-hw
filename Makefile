@@ -19,7 +19,8 @@ fmt:
 vet:
 	go $@ ./...
 
-.PHONE: lint
+.PHONY: lint
+lint:
 	golangci-lint run
 
 .PHONY: test
